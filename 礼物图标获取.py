@@ -2,9 +2,8 @@ import re
 from urllib import request
 from requests import get
 
+
 # 读取旧文件
-
-
 def get():
     try:
         with open('礼物图标下载.txt', 'r')as f:
@@ -53,13 +52,13 @@ def txt(data):
 # 找不同
 def find(list_old, list_new):
     new_gift = []
-    for i in list_old:
-        if not i in list_new[0]:
+    for i in list_new[0]:
+        if i not in list_old:
             new_gift.append(i)
     if len(new_gift) != 0:
         print('本次更新新出现的礼物有:')
         print('  ', end='')
-        for i in range(len(new_gift)):
+        for i in new_gift:
             print(i, end=' ')
         print()
     else:
