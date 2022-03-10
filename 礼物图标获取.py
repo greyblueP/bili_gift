@@ -1,18 +1,18 @@
 import re
 from urllib import request
 from requests import get
+import json
 
 
-# 读取旧文件
+# 读取旧数据
 def get():
+    list_old = []
     try:
-        with open('礼物图标下载.txt', 'r')as f:
-            data = f.read()
-            pat_1 = re.compile(r'【\d{1,4}】(.*?)\n')
-            pat1 = pat_1.findall(data)
-            return(pat1)
+        with open('礼物列表.json', 'r')as f:
+            list_old = json.load(f)
+        return list_old
     except:
-        print('读取旧有文件失败')
+        print('未找到文件 礼物列表.json\n')
         return False
 
 
@@ -31,70 +31,103 @@ def online(url):
     return html
 
 
-# 生成新文件
-def txt(data):
+# 读取新数据
+def txt(html):
     pat_1 = re.compile(r'{"id":\d{1,20},"name":"(.*?)","price"')
-    pat1 = pat_1.findall(data)
+    pat1 = pat_1.findall(html)
     pat_2 = re.compile(r'"img_basic":"(.*?)","img_dynamic"')
-    pat2 = pat_2.findall(data)
+    pat2 = pat_2.findall(html)
     pat_3 = re.compile(r'"gif":"(.*?)","webp"')
-    pat3 = pat_3.findall(data)
-    print('共读取到'+str(len(pat1))+'条礼物数据')
-    with open('礼物图标下载.txt', 'w')as f:
-        for i in range(len(pat1)):
-            f.write('【'+str(i+1)+'】'+pat1[i]+'\n')
-            f.write(' '*5+'【PNG】'+pat2[i]+'\n')
-            f.write(' '*5+'【GIF】'+pat3[i]+'\n')
-    print('写入完毕')
-    return [pat1, pat2, pat3]
+    pat3 = pat_3.findall(html)
+
+    list_new = {}
+    for i in range(len(pat1)):
+        list_new[pat1[i]] = {
+            'PNG': pat2[i],
+            'GIF': pat3[i]
+        }
+    print('共读取到'+str(len(list_new))+'个礼物\n')
+    return list_new
 
 
-# 找不同
+# 检测重复
+def check(list_new):
+    repeat = {}
+    for i in list_new:
+        for j in list_new:
+            if list_new[i] == list_new[j] and i != j:
+                url = list_new[i]
+                png = url['PNG']
+                if png in repeat:
+                    repeat[png].add(i)
+                    repeat[png].add(j)
+                else:
+                    repeat[png] = {i, j}
+    return repeat
+
+
+# 新旧数据对比
 def find(list_old, list_new):
     new_gift = []
-    for i in list_new[0]:
+    for i in list_new:
         if i not in list_old:
             new_gift.append(i)
-    if len(new_gift) != 0:
-        print('本次更新新出现的礼物有:')
-        print('  ', end='')
-        for i in new_gift:
-            print(i, end=' ')
-        print()
-    else:
-        print('本次更新没有找到新礼物')
+    return new_gift
 
 
 # 下载礼物
 def download(list_new):
-    gift = input('请输入需要下载图标的礼物名称:')
-    if gift in list_new[0]:
-        for i in range(len(list_new[0])):
-            if gift == list_new[0][i]:
-                print('已找到礼物下载地址')
-                try:
-                    # png
-                    request.urlretrieve(list_new[1][i], gift+'.png')
-                    print(gift+'.png', '下载成功')
-                    # gif
-                    request.urlretrieve(list_new[2][i], gift+'.gif')
-                    print(gift+'.gif', '下载成功')
-                except:
-                    print('下载失败,请手动下载')
-                break
+    gift = input('\n请输入需要下载图标的礼物名称:')
+    if gift in list_new:
+        url = list_new[gift]
+        try:
+            # png
+            request.urlretrieve(url['PNG'], gift+'.png')
+            print(gift+'.png', '下载成功')
+            # gif
+            request.urlretrieve(url['GIF'], gift+'.gif')
+            print(gift+'.gif', '下载成功')
+        except:
+            print('下载失败,请手动下载')
+            print(url['PNG'], '\n', url['GIF'])
     else:
         print('未找到指定名称的礼物,请检查输入后再下载')
 
 
+# {
+#     名称:{
+#         png:xxx,
+#         gif:xxx
+#     }
+# }
+
+print('b站礼物获取v1.2\n')
 # 读取旧数据
 list_old = get()
 # 读取新数据
 url = 'https://api.live.bilibili.com/gift/v3/live/gift_config'
-data = online(url)
-list_new = txt(data)
+html = online(url)
+list_new = txt(html)
+# 写入新数据
+with open('礼物列表.json', 'w')as f:
+    json.dump(list_new, f, indent=4, ensure_ascii=False)
+# 检测重复
+repeat = check(list_new)
+if len(repeat) != 0:
+    print('下载地址重复的礼物:')
+    for i in repeat:
+        print('  '+i)
+        print('    '+str(repeat[i]))
+# 新旧数据对比
 if list_old != False:
-    # 新旧数据对比
-    find(list_old, list_new)
+    new_gift = find(list_old, list_new)
+    if len(new_gift) != 0:
+        print('\n本次更新发现'+str(len(new_gift))+'个新礼物:')
+        for i in new_gift:
+            print('  '+i)
+    else:
+        print('\n本次更新未发现新礼物')
 # 下载礼物
 while True:
     download(list_new)
+
