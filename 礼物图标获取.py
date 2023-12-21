@@ -110,7 +110,7 @@ def download(gift):
 #         gif:xxx
 #     }
 # }
-print("b站礼物获取v1.3\n")
+print("b站礼物获取v1.4\n")
 # 读取旧数据
 list_old = get_data()
 # 读取新数据
