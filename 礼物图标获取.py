@@ -3,6 +3,7 @@ from urllib.request import urlretrieve
 from requests import get
 from json import dump, load
 from fuzzywuzzy.process import extract
+from fake_useragent import UserAgent
 
 
 # 读取旧数据
@@ -19,7 +20,8 @@ def get_data():
 
 # 读取新数据
 def txt(url):
-    html = get(url).text
+    # html = get(url).text
+    html = get(url, headers={"User-Agent": UserAgent().random}).text
     pat1 = compile(r'{"id":\d{1,20},"name":"(.*?)","price"').findall(html)
     pat2 = compile(r'"img_basic":"(.*?)","img_dynamic"').findall(html)
     pat3 = compile(r'"gif":"(.*?)","webp"').findall(html)
